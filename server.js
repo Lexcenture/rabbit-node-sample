@@ -1,5 +1,6 @@
 var async = require('async');
 var express = require('express');
+var expressio = require('express.io');
 var hbs = require('express-handlebars');
 var bodyParser = require('body-parser');
 var when = require('when');
@@ -10,7 +11,8 @@ var amqp = require('amqplib');
 var queueName = 'intel-queue';
 var exchangeName = 'intelligence';
 
-var app = express();
+var app = expressio();
+app.http().io();
 
 var jsonParser = bodyParser.json()
 
@@ -30,23 +32,32 @@ app.engine('hbs', hbs({
 }));
 app.set('view engine', 'hbs');
 
-app.route('/')
-    .get(render)
-    .post(jsonParser, publish)
+app.get('/', render);
+app.post('/', jsonParser, publish)
 
-app.route('/home')
-    .get(renderHome)
-
-app.route('/stream')
-    .get(stream);
+app.io.route('stream', function(req) {
+  amqp.connect(['amqp://', config.rabbit.host].join('')).then(function(conn) {
+    var ok = conn.createChannel();
+    ok = ok.then(function(ch) {
+      ch.assertQueue(queueName);
+      ch.bindQueue(queueName, exchangeName);
+      ch.consume(queueName, function(msg) {
+        if (msg !== null) {
+          var message = msg.content.toString().replace(/(\r\n|\n|\r)/gm,"");
+          console.log(" [x] Received '%s'", message);
+          req.io.broadcast('newIntel', message);
+          ch.ack(msg);
+        }
+      });
+    });
+    return ok;
+  }).then(null, console.warn);
+});
 
 function render(req, res, next) {
   res.render('home', {intels: [], pageSpecificScript: 'homeScriptPartial'});
 }
 
-function renderHome(req, res, next) {
-  res.render('home', {intels: [], pageSpecificScript: 'home2ScriptPartial'});
-}
 
 function publish(req, res, next) {
 
@@ -61,47 +72,34 @@ function publish(req, res, next) {
       return ok.then(function () {
 
         var message = JSON.stringify(intelligence);
-
         ch.publish(exchangeName, '', new Buffer(message));
+
         console.log(" [x] Sent '%s'", message);
+
+
         return ch.close();
+
       });
     })).ensure(function () {
+
       conn.close();
-      res.sendStatus(201);
+
+      try{
+        res.statusCode = 201;
+        res.end('created!');
+      }catch(e) {
+        console.log("ERROR MESSAGE: ", e.message);
+
+      }
+
 
     });
   }).then(null, function (message) {
-    console.log(message);
-    res.sendStatus(500);
+    console.log("ERROR: ", message);
+    res.statusCode = 500;
+    res.end('failed');
   });
 }
-
-
-function stream(req, res, next) {
-  res.header('Content-Type', 'text/event-stream');
-  res.header('Cache-Control', 'no-cache');
-  res.header('Connection', 'keep-alive');
-  res.status(200);
-
-  amqp.connect(['amqp://', config.rabbit.host].join('')).then(function(conn) {
-    var ok = conn.createChannel();
-    ok = ok.then(function(ch) {
-      ch.assertQueue(queueName);
-      ch.bindQueue(queueName, exchangeName);
-      ch.consume(queueName, function(msg) {
-        if (msg !== null) {
-          var message = msg.content.toString().replace(/(\r\n|\n|\r)/gm,"");
-          console.log(" [x] Received '%s'", message);
-          res.write("data: " + message + "\n\n");
-          ch.ack(msg);
-        }
-      });
-    });
-    return ok;
-  }).then(null, console.warn);
-}
-
 
 app.listen(config.server.port);
 console.log('Listening on port ' + config.server.port);
