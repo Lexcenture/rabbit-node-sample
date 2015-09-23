@@ -1,14 +1,24 @@
-<section class="intel_wrapper">
-  <h2>List of intelligence</h2>
-  <ul id="intel_list">
-    {{#each intels}}
-      <li id="{{this.id}}">
-        <h1>{{this.headline}}</h1>
+<div class="container">
+  <div class="page-header">
+    <h1 id="timeline">Intelligence</h1>
+  </div>
+  <ul id='intel_list' class="timeline">
+  {{#each intels}}
+    <li>
+      <div class="timeline-badge"><i class="glyphicon glyphicon-check"></i></div>
+      <div class="timeline-panel">
+        <div class="timeline-heading">
+          <h4 class="timeline-title">{{this.headline}}</h4>
 
-        <p>{{this.content}}</p>
-      </li>
-    {{else}}
-      <li>No intelligence published.</li>
-    {{/each}}
+          <p>
+            <small class="text-muted"><i class="glyphicon glyphicon-time"></i> {{this.time}}</small>
+          </p>
+        </div>
+        <div class="timeline-body">
+          <p>{{this.content}}</p>
+        </div>
+      </div>
+    </li>
+  {{/each}}
   </ul>
-</section>
+</div>

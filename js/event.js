@@ -24,13 +24,17 @@ var eventHandler = {
         try {
           newIntel = JSON.parse(event.data);
 
+          alert(event.data);
+
         }
         catch (e) {
           console.log('Received an invalid json object.');
           return;
         }
+
         var newIntelNode = document.createElement("LI");
         newIntelNode.id = newIntel.id;
+
         newIntelNode.innerHTML = ['<h3>', newIntel.headline, '</h3><p>', newIntel.content, '</p>'].join('');
         intelList.insertBefore(newIntelNode, intelList.firstChild);
 

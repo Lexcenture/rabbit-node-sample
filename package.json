@@ -15,6 +15,8 @@
     "express": "^4.13.1",
     "express-handlebars": "^2.0.1",
     "express.io": "^1.1.13",
+    "moment": "^2.10.3",
+    "moment-timezone": "^0.4.0",
     "redis": "^0.12.1",
     "when": "^3.7.3"
   }

@@ -3,7 +3,7 @@ var express = require('express.io');
 var hbs = require('express-handlebars');
 var bodyParser = require('body-parser');
 var when = require('when');
-
+var dateHelper = require('./helpers/date');
 var config = require('./config.js');
 
 var amqp = require('amqplib');
@@ -19,6 +19,7 @@ workers = function () {
   var jsonParser = bodyParser.json()
 
   app.use('/js', express.static('js'));
+  app.use('/style', express.static('style'));
 
   app.set('views', __dirname + '/views');
   app.engine('hbs', hbs({
@@ -91,6 +92,8 @@ function publish(req, res, next) {
   if (!req.body) return res.sendStatus(400)
 
   var intelligence = req.body;
+
+  intelligence.time = intelligence.dateSetToFinal;
 
   amqp.connect(['amqp://', config.rabbit.host].join('')).then(function (conn) {
     return when(conn.createChannel().then(function (ch) {
